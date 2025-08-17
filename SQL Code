@@ -1,0 +1,181 @@
+-- 1. Create database
+CREATE DATABASE airlinemanagementsystem;
+USE airlinemanagementsystem;
+
+-- 2. Login Table
+CREATE TABLE login (
+    username VARCHAR(20),
+    password VARCHAR(20)
+);
+
+INSERT INTO login VALUES('admin', 'admin');
+
+-- 3. Passenger Table
+CREATE TABLE passenger (
+    name VARCHAR(20),
+    nationality VARCHAR(20),
+    phone VARCHAR(15),
+    address VARCHAR(50),
+    aadhar VARCHAR(20),
+    gender VARCHAR(20)
+);
+
+-- 4. Flight Table
+CREATE TABLE flight (
+    f_code VARCHAR(20),
+    f_name VARCHAR(20),
+    source VARCHAR(40),
+    destination VARCHAR(40)
+);
+
+INSERT INTO flight VALUES
+("1001", "AI-1212", "Dhaka", "Cox's Bazar"),
+("1002", "AI-1453", "Sylhet", "Dhaka"),
+("1003", "AI-1112", "Cox's Bazar", "Khulna"),
+("1004", "AI-2322", "Khulna", "Rajshahi"),
+("1005", "AI-1121", "Rajshahi", "Sylhet");
+
+-- 5. Reservation Table
+CREATE TABLE reservation (
+    PNR VARCHAR(15),
+    TICKET VARCHAR(20),
+    aadhar VARCHAR(20),
+    name VARCHAR(20),
+    nationality VARCHAR(30),
+    flightname VARCHAR(15),
+    flightcode VARCHAR(20),
+    src VARCHAR(30),
+    des VARCHAR(30),
+    ddate VARCHAR(30)
+);
+
+-- 6. Cancel Table
+CREATE TABLE cancel (
+    pnr VARCHAR(20),
+    name VARCHAR(40),
+    cancelno VARCHAR(20),
+    fcode VARCHAR(20),
+    ddate VARCHAR(30)
+);
+
+-- 7. Passenger Log Table
+CREATE TABLE passenger_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50),
+    nationality VARCHAR(30),
+    log_time DATETIME
+);
+
+-- 8. Reservation Log Table
+CREATE TABLE reservation_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    aadhar VARCHAR(20),
+    pnr VARCHAR(20),
+    log_time DATETIME
+);
+
+-- 10. Trigger: After Insert Passenger
+DELIMITER $$
+CREATE TRIGGER trg_after_add_passenger
+AFTER INSERT ON passenger
+FOR EACH ROW
+BEGIN
+    INSERT INTO passenger_log(name, nationality, log_time)
+    VALUES (NEW.name, NEW.nationality, NOW());
+END$$
+DELIMITER ;
+
+-- 11. Trigger: After Insert Reservation
+DELIMITER $$
+CREATE TRIGGER trg_after_booking
+AFTER INSERT ON reservation
+FOR EACH ROW
+BEGIN
+    INSERT INTO reservation_log (aadhar, pnr, log_time)
+    VALUES (NEW.aadhar, NEW.PNR, NOW());
+END$$
+DELIMITER ;
+
+-- 12. View: Booked Flights Summary
+CREATE VIEW v_booked_flights AS
+SELECT
+    r.PNR, r.TICKET, r.aadhar, r.name, r.nationality,
+    r.flightname, r.flightcode, r.src, r.des, r.ddate
+FROM reservation r;
+
+
+-- Book Flight Procedure
+DELIMITER $$
+CREATE PROCEDURE book_flight(
+    IN in_aadhar VARCHAR(20),
+    IN in_name VARCHAR(20),
+    IN in_nationality VARCHAR(30),
+    IN in_flightname VARCHAR(15),
+    IN in_flightcode VARCHAR(20),
+    IN in_src VARCHAR(30),
+    IN in_des VARCHAR(30),
+    IN in_ddate VARCHAR(30)
+)
+BEGIN
+    INSERT INTO reservation
+    VALUES (
+        CONCAT("PNR-", FLOOR(RAND() * 1000000)),
+        CONCAT("TIC-", FLOOR(RAND() * 10000)),
+        in_aadhar, in_name, in_nationality,
+        in_flightname, in_flightcode, in_src, in_des, in_ddate
+    );
+END$$
+DELIMITER ;
+
+-- Add Passenger Procedure
+DELIMITER $$
+CREATE PROCEDURE add_passenger(
+    IN in_name VARCHAR(20),
+    IN in_nationality VARCHAR(20),
+    IN in_phone VARCHAR(15),
+    IN in_address VARCHAR(50),
+    IN in_aadhar VARCHAR(20),
+    IN in_gender VARCHAR(20)
+)
+BEGIN
+    INSERT INTO passenger (name, nationality, phone, address, aadhar, gender)
+    VALUES (in_name, in_nationality, in_phone, in_address, in_aadhar, in_gender);
+END$$
+DELIMITER ;
+
+-- Get Journey Details by PNR
+DELIMITER $$
+CREATE PROCEDURE get_journey_by_pnr(
+    IN in_pnr VARCHAR(15)
+)
+BEGIN
+    SELECT * FROM reservation WHERE PNR = in_pnr;
+END$$
+DELIMITER ;
+
+-- Cancel Flight Procedure
+DELIMITER $$
+CREATE PROCEDURE cancel_flight(
+    IN in_pnr VARCHAR(20),
+    IN in_name VARCHAR(40),
+    IN in_cancelno VARCHAR(20),
+    IN in_fcode VARCHAR(20),
+    IN in_ddate VARCHAR(30)
+)
+BEGIN
+    INSERT INTO cancel (pnr, name, cancelno, fcode, ddate)
+    VALUES (in_pnr, in_name, in_cancelno, in_fcode, in_ddate);
+
+    DELETE FROM reservation WHERE PNR = in_pnr;
+END$$
+DELIMITER ;
+
+-- Get Boarding Pass by PNR
+DELIMITER $$
+CREATE PROCEDURE get_boarding_pass_by_pnr(
+    IN in_pnr VARCHAR(15)
+)
+BEGIN
+    SELECT * FROM reservation WHERE PNR = in_pnr;
+END$$
+DELIMITER ;
